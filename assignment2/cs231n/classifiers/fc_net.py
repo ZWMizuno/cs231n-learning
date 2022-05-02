@@ -73,7 +73,22 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.                               #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        #通过循环初始化权重
+        W_list = np.zeros_like(hidden_dims)
+        b_list = np.zeros_like(hidden_dims)
+        for i in range(len(hidden_dims)):
+            if i == 0:
+                self.params['W' + str(i+1)] = np.random.normal(0.0, weight_scale, size=(input_dim, hidden_dims[i]))
+                self.params['b' + str(i+1)] = np.zeros(hidden_dims[i])
+            elif i == (len(hidden_dims) - 1):
+                self.params['W' + str(i+1)] = np.random.normal(0.0, weight_scale, size=(hidden_dims[i], num_classes))
+                self.params['b' + str(i+1)] = np.zeros(num_classes)
+            else:
+                self.params['W' + str(i+1)] = np.random.normal(0.0, weight_scale, size=(hidden_dims[i-1],hidden_dims[i]))
+                self.params['b' + str(i+1)] = np.zeros(hidden_dims[i])
 
+        #生成层
+        # self.layers = OrderedDit()
         pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -147,7 +162,15 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        caches = np.zeros_like(self.num_layers-1)
 
+        for i in range(self.num_layers-2):
+            X , caches[i] = affine_relu_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
+        scores , caches[self.num_layers-2] = affine_forward(X, self.params['W' + str(self.num_layers-1)], self.params['b' + str(self.num_layers-1)])
+
+        # AR1_out, AR1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
+        # A2_out, A2_cache = affine_forward(AR1_out, self.params['W2'], self.params['b2'])
+        # scores = X
         pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -174,7 +197,18 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        loss, dl = softmax_loss(caches[self.num_layers-2], y)
+        for i in range(self.num_layers-1):
+            loss += 0.5 * self.reg * self.params['W' + str(i+1)] * self.params['W' + str(i+1)]
 
+        # dX2, dW2, db2 = affine_backward(dsm, A2_cache)
+        # dW2 += 0.5 * 2 * self.reg * self.params['W2']#正则化后面还有关于W1、W2的加项
+        # grads['W2'] = dW2
+        # grads['b2'] = db2
+        # dX1, dW1, db1 = affine_relu_backward(dX2, AR1_cache)
+        # dW1 += 0.5 * 2 * self.reg * self.params['W1']#正则化后面还有关于W1、W2的加项
+        # grads['W1'] = dW1
+        # grads['b1'] = db1
         pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
