@@ -24,7 +24,10 @@ def affine_forward(x, w, b):
     # TODO: Copy over your solution from Assignment 1.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    benchmark = np.ones_like(x)
+    x = np.reshape(x,(x.shape[0],-1))#降维
+    out = x.dot(w)+b
+    x = np.reshape(x,benchmark.shape)#拉伸
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -56,7 +59,12 @@ def affine_backward(dout, cache):
     # TODO: Copy over your solution from Assignment 1.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    benchmark = np.ones_like(x)
+    x = np.reshape(x, (x.shape[0], -1))#降维
+    dx = dout.dot(w.T)
+    dx = np.reshape(dx,benchmark.shape)#拉伸 怎么把格式变回去？!!把xxx.shape作为目标格式
+    dw = x.T.dot(dout)
+    db = np.sum(dout,axis=0)##!!!不懂原理，思考!!
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -81,7 +89,7 @@ def relu_forward(x):
     # TODO: Copy over your solution from Assignment 1.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    out = x*(x>0)
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -107,7 +115,7 @@ def relu_backward(dout, cache):
     # TODO: Copy over your solution from Assignment 1.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    dx = dout*(x>0)
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -136,7 +144,18 @@ def softmax_loss(x, y):
     # TODO: Copy over your solution from Assignment 1.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    num_classes = x.shape[1]
+    num_train = x.shape[0]
 
+    exp_scores = np.exp(x)
+    pro = exp_scores/np.reshape(np.sum(exp_scores,axis=1),(num_train,1))#不reshape则报错operands could not be broadcast together with shapes (500,10) (500,)
+    loss_i = -np.log(pro[np.arange(num_train),y])
+    loss = np.sum(loss_i)/num_train
+
+    sum_exp = np.sum(exp_scores, axis=1)
+    coe = exp_scores / np.reshape(sum_exp, (num_train, 1))# sum之后要reshape
+    coe[np.arange(coe.shape[0]),y] -= 1
+    dx = coe / num_train
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -692,7 +711,7 @@ def spatial_batchnorm_backward(dout, cache):
 
 def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     """Computes the forward pass for spatial group normalization.
-    
+
     In contrast to layer normalization, group normalization splits each entry in the data into G
     contiguous pieces, which it then normalizes independently. Per-feature shifting and scaling
     are then applied to the data, in a manner identical to that of batch normalization and layer
