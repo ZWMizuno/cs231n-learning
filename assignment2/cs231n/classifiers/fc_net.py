@@ -11,7 +11,8 @@ class FullyConnectedNet(object):
 
     Network contains an arbitrary number of hidden layers, ReLU nonlinearities,
     and a softmax loss function. This will also implement dropout and batch/layer
-    normalization as options. For a network with L layers, the architecture will be
+    normalization as options.
+    For a network with L layers, the architecture will be
 
     {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
 
@@ -22,20 +23,21 @@ class FullyConnectedNet(object):
     using the Solver class.
     """
 
+    #总共有l+1层，含第0层(输入层，不用接权重)，最后一层编号为l层(输出层)，共有l-1层隐藏层
+
     def __init__(
-        self,
-        hidden_dims,
-        input_dim=3 * 32 * 32,
-        num_classes=10,
-        dropout_keep_ratio=1,
-        normalization=None,
-        reg=0.0,
-        weight_scale=1e-2,
-        dtype=np.float32,
-        seed=None,
+            self,
+            hidden_dims,
+            input_dim=3 * 32 * 32,
+            num_classes=10,
+            dropout_keep_ratio=1,
+            normalization=None,
+            reg=0.0,
+            weight_scale=1e-2,
+            dtype=np.float32,
+            seed=None,
     ):
         """Initialize a new FullyConnectedNet.
-
         Inputs:
         - hidden_dims: A list of integers giving the size of each hidden layer.
         - input_dim: An integer giving the size of the input.
@@ -73,21 +75,21 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.                               #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        #通过循环初始化权重
-        W_list = np.zeros_like(hidden_dims)
-        b_list = np.zeros_like(hidden_dims)
-        for i in range(len(hidden_dims)):
+        # 通过循环初始化权重
+        for i in range(self.num_layers):
             if i == 0:
-                self.params['W' + str(i+1)] = np.random.normal(0.0, weight_scale, size=(input_dim, hidden_dims[i]))
-                self.params['b' + str(i+1)] = np.zeros(hidden_dims[i])
-            elif i == (len(hidden_dims) - 1):
-                self.params['W' + str(i+1)] = np.random.normal(0.0, weight_scale, size=(hidden_dims[i], num_classes))
-                self.params['b' + str(i+1)] = np.zeros(num_classes)
+                self.params['W' + str(i + 1)] = np.random.normal(0.0, weight_scale, size=(input_dim, hidden_dims[i]))
+                self.params['b' + str(i + 1)] = np.zeros(hidden_dims[i])
+            elif i == (self.num_layers - 1):
+                self.params['W' + str(i + 1)] = np.random.normal(0.0, weight_scale, size=(hidden_dims[i - 1], num_classes))
+                self.params['b' + str(i + 1)] = np.zeros(num_classes)
             else:
-                self.params['W' + str(i+1)] = np.random.normal(0.0, weight_scale, size=(hidden_dims[i-1],hidden_dims[i]))
-                self.params['b' + str(i+1)] = np.zeros(hidden_dims[i])
+                self.params['W' + str(i + 1)] = np.random.normal(0.0, weight_scale,
+                                                                 size=(hidden_dims[i - 1], hidden_dims[i]))
+                self.params['b' + str(i + 1)] = np.zeros(hidden_dims[i])
+        #列表里面不能存储array对象，字典里面可以存
 
-        #生成层
+        # 生成层
         # self.layers = OrderedDit()
         pass
 
@@ -122,16 +124,14 @@ class FullyConnectedNet(object):
 
     def loss(self, X, y=None):
         """Compute loss and gradient for the fully connected net.
-        
+
         Inputs:
         - X: Array of input data of shape (N, d_1, ..., d_k)
         - y: Array of labels, of shape (N,). y[i] gives the label for X[i].
-
         Returns:
         If y is None, then run a test-time forward pass of the model and return:
         - scores: Array of shape (N, C) giving classification scores, where
             scores[i, c] is the classification score for X[i] and class c.
-
         If y is not None, then run a training-time forward and backward pass and
         return a tuple of:
         - loss: Scalar value giving the loss
@@ -162,11 +162,12 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        caches = np.zeros_like(self.num_layers-1)
+        caches = {}
 
-        for i in range(self.num_layers-2):
-            X , caches[i] = affine_relu_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
-        scores , caches[self.num_layers-2] = affine_forward(X, self.params['W' + str(self.num_layers-1)], self.params['b' + str(self.num_layers-1)])
+        for i in range(self.num_layers - 1):
+            X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
+        scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],
+                                                             self.params['b' + str(self.num_layers)])
 
         # AR1_out, AR1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
         # A2_out, A2_cache = affine_forward(AR1_out, self.params['W2'], self.params['b2'])
@@ -197,9 +198,9 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        loss, dl = softmax_loss(caches[self.num_layers-2], y)
-        for i in range(self.num_layers-1):
-            loss += 0.5 * self.reg * self.params['W' + str(i+1)] * self.params['W' + str(i+1)]
+        loss, dl = softmax_loss(caches[self.num_layers - 2], y)
+        for i in range(self.num_layers - 1):
+            loss += 0.5 * self.reg * self.params['W' + str(i + 1)] * self.params['W' + str(i + 1)]
 
         # dX2, dW2, db2 = affine_backward(dsm, A2_cache)
         # dW2 += 0.5 * 2 * self.reg * self.params['W2']#正则化后面还有关于W1、W2的加项
