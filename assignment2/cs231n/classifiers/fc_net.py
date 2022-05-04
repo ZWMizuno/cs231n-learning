@@ -78,17 +78,23 @@ class FullyConnectedNet(object):
         # 通过循环初始化权重
         for i in range(self.num_layers):
             if i == 0:
-                self.params['W' + str(i + 1)] = np.random.normal(0.0, weight_scale, size=(input_dim, hidden_dims[i]))
-                self.params['b' + str(i + 1)] = np.zeros(hidden_dims[i])
+                w = np.random.normal(0.0, weight_scale, size=(input_dim, hidden_dims[i]))
+                b = np.zeros(hidden_dims[i])
+                self.params['W' + str(i + 1)] = w
+                self.params['b' + str(i + 1)] = b
             elif i == (self.num_layers - 1):
-                self.params['W' + str(i + 1)] = np.random.normal(0.0, weight_scale, size=(hidden_dims[i - 1], num_classes))
-                self.params['b' + str(i + 1)] = np.zeros(num_classes)
+                w = np.random.normal(0.0, weight_scale, size=(hidden_dims[i - 1], num_classes))
+                b = np.zeros(num_classes)
+                self.params['W' + str(i + 1)] = w
+                self.params['b' + str(i + 1)] = b
             else:
-                self.params['W' + str(i + 1)] = np.random.normal(0.0, weight_scale,
-                                                                 size=(hidden_dims[i - 1], hidden_dims[i]))
-                self.params['b' + str(i + 1)] = np.zeros(hidden_dims[i])
-        #列表里面不能存储array对象，字典里面可以存
+                w = np.random.normal(0.0, weight_scale,size=(hidden_dims[i - 1], hidden_dims[i]))
+                b = np.zeros(hidden_dims[i])
+                self.params['W' + str(i + 1)] = w
+                self.params['b' + str(i + 1)] = b
+            # print(w.shape)#可删
 
+        #列表里面不能存储array对象，字典里面可以存
         # 生成层
         # self.layers = OrderedDit()
         pass
@@ -166,8 +172,7 @@ class FullyConnectedNet(object):
 
         for i in range(self.num_layers - 1):
             X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
-        scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],
-                                                             self.params['b' + str(self.num_layers)])
+        scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],self.params['b' + str(self.num_layers)])
 
         # AR1_out, AR1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
         # A2_out, A2_cache = affine_forward(AR1_out, self.params['W2'], self.params['b2'])
@@ -198,10 +203,15 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        loss, dl = softmax_loss(caches[self.num_layers - 2], y)
-        for i in range(self.num_layers - 1):
-            loss += 0.5 * self.reg * self.params['W' + str(i + 1)] * self.params['W' + str(i + 1)]
+        loss, dscores = softmax_loss(scores, y)
+        for i in range(self.num_layers):
+            loss += 0.5 * self.reg * np.sum(self.params['W' + str(i + 1)] * self.params['W' + str(i + 1)])
 
+        for i in range(self.num_layers):
+            dx , dw , db = affine_backward(dscores, cache[self.num_layers - 1 - i])
+            dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
+            grads['w' + str(self.num_layers - i)] = dw
+            grads['b' + str(self.num_layers - i)] = db
         # dX2, dW2, db2 = affine_backward(dsm, A2_cache)
         # dW2 += 0.5 * 2 * self.reg * self.params['W2']#正则化后面还有关于W1、W2的加项
         # grads['W2'] = dW2
