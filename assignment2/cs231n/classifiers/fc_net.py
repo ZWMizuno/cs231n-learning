@@ -170,10 +170,18 @@ class FullyConnectedNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         caches = {}
 
-        for i in range(self.num_layers - 1):
-            X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
-        scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],self.params['b' + str(self.num_layers)])
+        for i in range(self.num_layers):
+            if i == (self.num_layers - 1):
+                #如果是最后一层，就直接affine
+                scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],
+                                                                     self.params['b' + str(self.num_layers)])
+            else:
+                #如果不是最后一层，用affine加relu
+                X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
 
+
+
+        # print(len(caches[0]))#为啥是2?
         # AR1_out, AR1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
         # A2_out, A2_cache = affine_forward(AR1_out, self.params['W2'], self.params['b2'])
         # scores = X
@@ -208,10 +216,19 @@ class FullyConnectedNet(object):
             loss += 0.5 * self.reg * np.sum(self.params['W' + str(i + 1)] * self.params['W' + str(i + 1)])
 
         for i in range(self.num_layers):
-            dx , dw , db = affine_backward(dscores, cache[self.num_layers - 1 - i])
-            dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
-            grads['w' + str(self.num_layers - i)] = dw
-            grads['b' + str(self.num_layers - i)] = db
+            if i == 0:
+                #如果是最后一层，算affine的backward
+                dx, dw, db = affine_backward(dscores, caches[self.num_layers - 1 - i])
+                dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
+                grads['W' + str(self.num_layers - i)] = dw
+                grads['b' + str(self.num_layers - i)] = db
+            else:
+                #如果不是最后一层，算affine加relu的backward
+                dx, dw, db = affine_relu_backward(dx, caches[self.num_layers - 1 - i])
+                dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
+                grads['W' + str(self.num_layers - i)] = dw
+                grads['b' + str(self.num_layers - i)] = db
+
         # dX2, dW2, db2 = affine_backward(dsm, A2_cache)
         # dW2 += 0.5 * 2 * self.reg * self.params['W2']#正则化后面还有关于W1、W2的加项
         # grads['W2'] = dW2
