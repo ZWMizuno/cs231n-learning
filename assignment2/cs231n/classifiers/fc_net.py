@@ -101,7 +101,6 @@ class FullyConnectedNet(object):
         # 列表里面不能存储array对象，字典里面可以存
         # 生成层
         # self.layers = OrderedDit()
-        pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -179,21 +178,29 @@ class FullyConnectedNet(object):
                 scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],
                                                                      self.params['b' + str(self.num_layers)])
             else:
-                # 如果不是最后一层，用affine加relu
-                X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
+                if self.normalization == "batchnorm":
+                    X, caches[i] = affine_BN_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)],
+                                                        self.params['gamma' + str(i + 1)], self.params['beta' + str(i + 1)], self.bn_params[i])
+                elif self.normalization == "dropout":
+                    pass
+                elif self.normalization == "layernorm":
+                    pass
+                else:
+                    # 如果不是最后一层，用affine加relu
+                    X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
+
 
         # print(len(caches[0]))#为啥是2?
         # AR1_out, AR1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
         # A2_out, A2_cache = affine_forward(AR1_out, self.params['W2'], self.params['b2'])
         # scores = X
-        pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
-        # If test mode return early.
+        # If test mode return early.  test mode只输出分数
         if mode == "test":
             return scores
 
@@ -220,15 +227,28 @@ class FullyConnectedNet(object):
             if i == 0:
                 # 如果是最后一层，算affine的backward
                 dx, dw, db = affine_backward(dscores, caches[self.num_layers - 1 - i])
-                dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
+                dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)] #dloss对各层加上的dw
                 grads['W' + str(self.num_layers - i)] = dw
                 grads['b' + str(self.num_layers - i)] = db
             else:
-                # 如果不是最后一层，算affine加relu的backward
-                dx, dw, db = affine_relu_backward(dx, caches[self.num_layers - 1 - i])
-                dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
-                grads['W' + str(self.num_layers - i)] = dw
-                grads['b' + str(self.num_layers - i)] = db
+                if self.normalization == "batchnorm":
+                    # 如果不是最后一层，算affine加BN加relu的backward
+                    dx, dw, db, dgamma, dbeta = affine_BN_relu_backward(dx, caches[self.num_layers - 1 - i])
+                    dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)] #dloss对各层加上的dw
+                    grads['W' + str(self.num_layers - i)] = dw
+                    grads['b' + str(self.num_layers - i)] = db
+                    grads['gamma' + str(self.num_layers - i)] = dgamma
+                    grads['beta' + str(self.num_layers - i)] = dbeta
+                elif self.normalization == "dropout":
+                    pass
+                elif self.normalization == "layernorm":
+                    pass
+                else:
+                    # 如果不是最后一层，算affine加relu的backward
+                    dx, dw, db = affine_relu_backward(dx, caches[self.num_layers - 1 - i])
+                    dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)] #dloss对各层加上的dw
+                    grads['W' + str(self.num_layers - i)] = dw
+                    grads['b' + str(self.num_layers - i)] = db
 
         # dX2, dW2, db2 = affine_backward(dsm, A2_cache)
         # dW2 += 0.5 * 2 * self.reg * self.params['W2']#正则化后面还有关于W1、W2的加项
