@@ -8,22 +8,18 @@ from ..layer_utils import *
 
 class FullyConnectedNet(object):
     """Class for a multi-layer fully connected neural network.
-
     Network contains an arbitrary number of hidden layers, ReLU nonlinearities,
     and a softmax loss function. This will also implement dropout and batch/layer
     normalization as options.
     For a network with L layers, the architecture will be
-
     {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
-
     where batch/layer normalization and dropout are optional and the {...} block is
     repeated L - 1 times.
-
     Learnable parameters are stored in the self.params dictionary and will be learned
     using the Solver class.
     """
 
-    #总共有l+1层，含第0层(输入层，不用接权重)，最后一层编号为l层(输出层)，共有l-1层隐藏层
+    # 总共有l+1层，不算softmax层，实际有权重的有l层，含第0层(输入层，不用接权重)，最后一层编号为l层(输出层)，共有l-1层隐藏层
 
     def __init__(
             self,
@@ -88,13 +84,21 @@ class FullyConnectedNet(object):
                 self.params['W' + str(i + 1)] = w
                 self.params['b' + str(i + 1)] = b
             else:
-                w = np.random.normal(0.0, weight_scale,size=(hidden_dims[i - 1], hidden_dims[i]))
+                w = np.random.normal(0.0, weight_scale, size=(hidden_dims[i - 1], hidden_dims[i]))
                 b = np.zeros(hidden_dims[i])
                 self.params['W' + str(i + 1)] = w
                 self.params['b' + str(i + 1)] = b
             # print(w.shape)#可删
 
-        #列表里面不能存储array对象，字典里面可以存
+        if self.normalization == "batchnorm":
+            for i in range(self.num_layers-1):
+                gamma = np.ones(hidden_dims[i])
+                beta = np.zeros(hidden_dims[i])
+                self.params['gamma' + str(i + 1)] = gamma
+                self.params['beta' + str(i + 1)] = beta
+
+
+        # 列表里面不能存储array对象，字典里面可以存
         # 生成层
         # self.layers = OrderedDit()
         pass
@@ -130,7 +134,6 @@ class FullyConnectedNet(object):
 
     def loss(self, X, y=None):
         """Compute loss and gradient for the fully connected net.
-
         Inputs:
         - X: Array of input data of shape (N, d_1, ..., d_k)
         - y: Array of labels, of shape (N,). y[i] gives the label for X[i].
@@ -172,14 +175,12 @@ class FullyConnectedNet(object):
 
         for i in range(self.num_layers):
             if i == (self.num_layers - 1):
-                #如果是最后一层，就直接affine
+                # 如果是最后一层，就直接affine
                 scores, caches[self.num_layers - 1] = affine_forward(X, self.params['W' + str(self.num_layers)],
                                                                      self.params['b' + str(self.num_layers)])
             else:
-                #如果不是最后一层，用affine加relu
+                # 如果不是最后一层，用affine加relu
                 X, caches[i] = affine_relu_forward(X, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
-
-
 
         # print(len(caches[0]))#为啥是2?
         # AR1_out, AR1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
@@ -217,13 +218,13 @@ class FullyConnectedNet(object):
 
         for i in range(self.num_layers):
             if i == 0:
-                #如果是最后一层，算affine的backward
+                # 如果是最后一层，算affine的backward
                 dx, dw, db = affine_backward(dscores, caches[self.num_layers - 1 - i])
                 dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
                 grads['W' + str(self.num_layers - i)] = dw
                 grads['b' + str(self.num_layers - i)] = db
             else:
-                #如果不是最后一层，算affine加relu的backward
+                # 如果不是最后一层，算affine加relu的backward
                 dx, dw, db = affine_relu_backward(dx, caches[self.num_layers - 1 - i])
                 dw += 0.5 * 2 * self.reg * self.params['W' + str(self.num_layers - i)]
                 grads['W' + str(self.num_layers - i)] = dw
