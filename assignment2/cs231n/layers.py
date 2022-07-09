@@ -27,7 +27,7 @@ def affine_forward(x, w, b):
     benchmark = np.ones_like(x)
     x = np.reshape(x,(x.shape[0],-1))#降维
     out = x.dot(w)+b
-    x = np.reshape(x,benchmark.shape)#拉伸
+    x = np.reshape(x,benchmark.shape)#拉伸还原
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -62,7 +62,7 @@ def affine_backward(dout, cache):
     benchmark = np.ones_like(x)
     x = np.reshape(x, (x.shape[0], -1))#降维
     dx = dout.dot(w.T)
-    dx = np.reshape(dx,benchmark.shape)#拉伸 怎么把格式变回去？!!把xxx.shape作为目标格式
+    dx = np.reshape(dx,benchmark.shape)#拉伸 怎么把格式变回去呢？!!把xxx.shape作为目标格式
     dw = x.T.dot(dout)
     db = np.sum(dout,axis=0)##!!!不懂原理，思考!!
     pass
@@ -234,9 +234,16 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # might prove to be helpful.                                          #
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        sample_mean = np.sum(x, axis=0) / N
+        sample_var = np.sum((x - sample_mean) * (x - sample_mean), axis = 0) / N
+        norm_x = (x - sample_mean) / np.sqrt(sample_var + eps)
+        bn_x = norm_x * gamma + beta
+        out = bn_x
 
-        pass
+        cache = (x, norm_x, sample_mean, sample_var, gamma, eps)
 
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -249,8 +256,11 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Store the result in the out variable.                               #
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        sample_mean = np.sum(x, axis=0) / N
+        sample_var = np.sum((x - sample_mean) * (x - sample_mean), axis = 0) / N
+        norm_x = (x - sample_mean) / np.sqrt(sample_var + eps)
+        bn_x = norm_x * gamma + beta
+        out = bn_x
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -291,8 +301,22 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    '''
+    Reference:
+    https://arxiv.org/abs/1502.03167
+    Page:4
+    '''
 
+    N, D = dout.shape
+    x, norm_x, sample_mean, sample_var, gamma, eps = cache
+    dl_xhat = dout * gamma #(N, D)
+    dl_var = -0.5*np.power((sample_var+eps), -3/2) * np.sum(dl_xhat*(x-sample_mean), axis=0) #(D, )
+    dl_mean = -1/np.sqrt(sample_var+eps)*np.sum(dl_xhat, axis=0) + dl_var*np.sum(-2*(x-sample_mean), axis=0)/N #(D, )
+    dl_x = dl_xhat / np.sqrt(sample_var + eps) + dl_var * 2 * (x - sample_mean) / N + dl_mean / N #(N, D)
+
+    dx = dl_x
+    dbeta = np.sum(dout, axis = 0)
+    dgamma = np.sum(dout * norm_x, axis = 0)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -325,7 +349,23 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    '''
+    Reference:
+    https://arxiv.org/abs/1502.03167
+    Page:4
+    need to be simplified
+    '''
+
+    N, D = dout.shape
+    x, norm_x, sample_mean, sample_var, gamma, eps = cache
+    dl_xhat = dout * gamma #(N, D)
+    dl_var = -0.5*np.power((sample_var+eps), -3/2) * np.sum(dl_xhat*(x-sample_mean), axis=0) #(D, )
+    dl_mean = -1/np.sqrt(sample_var+eps)*np.sum(dl_xhat, axis=0) + dl_var*np.sum(-2*(x-sample_mean), axis=0)/N #(D, )
+    dl_x = dl_xhat / np.sqrt(sample_var + eps) + dl_var * 2 * (x - sample_mean) / N + dl_mean / N #(N, D)
+
+    dx = dl_x
+    dbeta = np.sum(dout, axis = 0)
+    dgamma = np.sum(dout * norm_x, axis = 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -711,7 +751,7 @@ def spatial_batchnorm_backward(dout, cache):
 
 def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     """Computes the forward pass for spatial group normalization.
-
+    
     In contrast to layer normalization, group normalization splits each entry in the data into G
     contiguous pieces, which it then normalizes independently. Per-feature shifting and scaling
     are then applied to the data, in a manner identical to that of batch normalization and layer
